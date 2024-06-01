@@ -6,4 +6,4 @@ This repository contains the code to build popular deep learning models from scr
 
 - [ ] Convolutional Neural Network (CNN)
 - [x] Long Short-Term Memory (LSTM)
-- [ ] Transformers
+- [x] Transformers
