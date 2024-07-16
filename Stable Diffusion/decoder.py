@@ -8,6 +8,7 @@ class VaeResidualBlock(nn.Module):
     """
     This class defines a residual block used in the decoder part of a Variational Autoencoder (VAE).
     """
+
     def __init__(self, in_channels, out_channels):
         super().__init__()
 
@@ -69,7 +70,7 @@ class VaeAttentionBlock(nn.Module):
         n, c, h, w = x.shape
 
         # B C H W -> B C H*W
-        x = x.view(n, c, h * w)
+        x = x.view((n, c, h * w))
 
         # B C H*W -> B H*W C
         x = x.transpose(-1, -2)

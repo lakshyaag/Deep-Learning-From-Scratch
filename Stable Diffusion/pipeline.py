@@ -1,3 +1,4 @@
+import numpy as np
 import torch
 from clip import CLIP
 from ddpm import DDPMSampler
@@ -72,19 +73,19 @@ def generate(
         clip: CLIP = models["clip"]
         clip.to(device)
 
-        conditional_tokens = tokenizer.batch_encode_plus(
-            [prompt], padding="max_length", max_length=77
-        ).input_ids
-
-        # B S
-        conditional_tokens = torch.tensor(
-            conditional_tokens, dtype=torch.long, device=device
-        )
-
-        # B S -> B S E
-        condtional_context = clip(conditional_tokens)
-
         if do_cfg:
+            conditional_tokens = tokenizer.batch_encode_plus(
+                [prompt], padding="max_length", max_length=77
+            ).input_ids
+
+            # B S
+            conditional_tokens = torch.tensor(
+                conditional_tokens, dtype=torch.long, device=device
+            )
+
+            # B S -> B S E
+            condtional_context = clip(conditional_tokens)
+
             # If classifier-free guidance is enabled
             # Convert negative prompt to embeddings using CLIP and concatenate with original prompt embeddings
 
@@ -105,7 +106,15 @@ def generate(
 
         else:
             # B S E -> B S E
-            context = condtional_context
+            tokens = tokenizer.batch_encode_plus(
+                [prompt], padding="max_length", max_length=77
+            ).input_ids
+
+            # B S
+            tokens = torch.tensor(tokens, dtype=torch.long, device=device)
+
+            # B S -> B S E
+            context = clip(tokens)
 
         # Move CLIP back to idle device
         to_idle(clip)
@@ -119,16 +128,41 @@ def generate(
         # B 4 H/8 W/8
         latents_shape = (1, 4, LATENT_HEIGHT, LATENT_WIDTH)
 
-        # ---------------------------------------------------- #
-        # TBD: img2img
-        # ---------------------------------------------------- #
+        if input_image:
+            encoder = models["encoder"]
+            encoder.to(device)
 
-        # ---------------------------------------------------- #
-        # txt2img
-        # ---------------------------------------------------- #
+            input_image_tensor = input_image.resize((WIDTH, HEIGHT))
 
-        # Start with random noise
-        latents = torch.randn(latents_shape, device=device, generator=generator)
+            input_image_tensor = np.array(input_image_tensor)
+            input_image_tensor = torch.tensor(
+                input_image_tensor, dtype=torch.float32, device=device
+            )
+
+            input_image_tensor = rescale(input_image_tensor, (0, 255), (-1, 1))
+
+            input_image_tensor = input_image_tensor.unsqueeze(0)
+
+            input_image_tensor = input_image_tensor.permute(0, 3, 1, 2)
+
+            encoder_noise = torch.randn(
+                latents_shape, generator=generator, device=device
+            )
+
+            latents = encoder(input_image_tensor, encoder_noise)
+
+            sampler.set_strength(strength=strength)
+            latents = sampler.add_noise(latents, sampler.timesteps[0])
+
+            to_idle(encoder)
+
+        else:
+            # ---------------------------------------------------- #
+            # txt2img
+            # ---------------------------------------------------- #
+
+            # Start with random noise
+            latents = torch.randn(latents_shape, device=device, generator=generator)
 
         diffusion = models["diffusion"]
         diffusion.to(device)
@@ -171,7 +205,8 @@ def generate(
         generated_image = rescale(generated_image, (-1, 1), (0, 255), clamp=True)
 
         # B 3 H W -> B H W 3
-        generated_image = (
-            generated_image.permute(0, 2, 3, 1).to("cpu", torch.uint8).numpy()
-        )
+        generated_image = generated_image.permute(0, 2, 3, 1)
+
+        generated_image = generated_image.to("cpu", torch.uint8).numpy()
+
         return generated_image[0]

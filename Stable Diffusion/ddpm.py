@@ -58,7 +58,16 @@ class DDPMSampler:
 
         return variance
 
-    # TBD: _set_strength (img2img)
+    def set_strength(self, strength=1):
+        """
+        Set how much noise to add to the input image.
+        More noise (strength ~ 1) means that the output will be further from the input image.
+        Less noise (strength ~ 0) means that the output will be closer to the input image.
+        """
+
+        start_step = self.num_inference_steps - int(self.num_inference_steps * strength)
+        self.timesteps = self.timesteps[start_step:]
+        self.start_step = start_step
 
     def add_noise(
         self, x: torch.FloatTensor, timestep: torch.IntTensor
