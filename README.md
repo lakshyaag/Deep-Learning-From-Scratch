@@ -8,7 +8,7 @@ This repository contains the code to build popular deep learning models from scr
   - [x] LeNet5
   - [x] AlexNet
   - [x] VGGNet
-  - [ ] ResNet
+  - [x] ResNet
   - [ ] YOLO
   - [ ] R-CNN
 - [ ] Recurrent Neural Network (RNN)
