@@ -7,9 +7,21 @@ This repository contains the code to build popular deep learning models from scr
 - [ ] Convolutional Neural Network (CNN)
   - [x] LeNet5
   - [x] AlexNet
-  - [ ] VGGNet
+  - [x] VGGNet
   - [ ] ResNet
+  - [ ] YOLO
+  - [ ] R-CNN
+- [ ] Recurrent Neural Network (RNN)
+  - [ ] Vanilla RNN
+  - [x] LSTM
+  - [ ] GRU
+  - [ ] Image Captioning (CNN + RNN)
+- [ ] Generative Models
   - [ ] GANs
-  - [ ] RNNs + CNNs
-- [x] Long Short-Term Memory (LSTM)
-- [x] Transformers
+  - [ ] VAEs
+  - [ ] Diffusion Models
+- [ ] Transformers
+  - [ ] Vanilla Transformer
+  - [ ] BERT
+  - [ ] Vision Transformer (ViT)
+  - [ ] GPT
