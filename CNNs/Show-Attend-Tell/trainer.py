@@ -275,12 +275,17 @@ def main():
         lr=cfg.LEARNING_RATE,
     )
 
+    # scheduler = torch.optim.lr_scheduler.MultiStepLR(
+    #     optimizer, milestones=[5, 10, 15], gamma=0.1
+    # )
+
     wandb.init(
         project=cfg.EXPERIMENT_NAME,
         config={
             **cfg.__dict__,
             "Optimizer": optimizer.__class__.__name__,
             "Loss Function": criterion.__class__.__name__,
+            # "Scheduler": scheduler.__class__.__name__,
             "ENCODER_MODEL": "resnet101",
             "DECODER_MODEL": "LSTM",
         },
@@ -295,6 +300,14 @@ def main():
         train_loss = train_step(train_loader, model, criterion, optimizer, epoch)
         print(f"Epoch: {epoch} | Train Loss: {train_loss:.4f}")
 
+        # scheduler.step()
+
+        # Get current learning rate from optimizer
+        # current_lr = scheduler.get_last_lr()[0]
+
+        # Log learning rate to wandb
+        # wandb.log({"lr": current_lr}, step=epoch)
+
         val_loss, val_top5acc, val_bleu = val_step(
             val_loader, model, criterion, epoch, tokenizer
         )
@@ -305,6 +318,9 @@ def main():
         if val_bleu > best_val_bleu4:
             best_val_bleu4 = val_bleu
             torch.save(model.state_dict(), "data/models/best_model.pth")
+
+        if epoch % 5 == 0:
+            torch.save(model.state_dict(), f"data/models/model_epoch_{epoch}.pth")
 
     torch.save(model.state_dict(), "data/models/final_model.pth")
     wandb.log_model("./data/models/final_model.pth", "show-attend-tell")

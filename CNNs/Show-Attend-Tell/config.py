@@ -5,9 +5,9 @@ from dataclasses import dataclass
 class Config:
     VOCAB_SIZE: int
 
-    BATCH_SIZE: int = 64
-    N_EPOCHS: int = 20
-    LEARNING_RATE: float = 3e-4
+    BATCH_SIZE: int = 32
+    N_EPOCHS: int = 10
+    LEARNING_RATE: float = 4e-4
     ENCODED_IMAGE_SIZE: int = 14
     EMBED_DIM: int = 512
     DECODER_DIM: int = 512
