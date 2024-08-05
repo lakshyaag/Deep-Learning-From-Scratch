@@ -1,5 +1,7 @@
-import torch
 import argparse
+
+import torch
+from config import Config
 from data import get_vocab, load_captions
 from models import ImageCaptioningModel
 from PIL import Image
@@ -8,8 +10,20 @@ from utils import get_transforms, visualize_model_attention
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
-def load_model(model_path):
-    model: ImageCaptioningModel = torch.load(model_path, map_location=device)
+def load_model(model_path, tokenizer, cfg):
+    model = ImageCaptioningModel(
+        tokenizer=tokenizer,
+        encoded_image_size=cfg.ENCODED_IMAGE_SIZE,
+        embed_dim=cfg.EMBED_DIM,
+        decoder_dim=cfg.DECODER_DIM,
+        attention_dim=cfg.ATTENTION_DIM,
+        vocab_size=cfg.VOCAB_SIZE,
+        encoder_dim=cfg.ENCODER_DIM,
+        debug=False,
+    ).to(device)
+
+    model.load_state_dict(torch.load(model_path, map_location=device))
+
     model.eval()
     return model
 
@@ -50,8 +64,9 @@ if __name__ == "__main__":
 
     captions_dict = load_captions()
     tokenizer = get_vocab(captions_dict)
+    cfg = Config(VOCAB_SIZE=len(tokenizer))
 
-    model = load_model(args.model_path)
+    model = load_model(args.model_path, tokenizer, cfg)
     generate_caption(
         args.image_path, model, tokenizer, args.beam_size, args.max_caption_length
     )

@@ -1,4 +1,4 @@
-import mlflow
+import wandb
 import numpy as np
 import torch
 import torch.nn as nn
@@ -18,6 +18,7 @@ from tqdm import tqdm
 from utils import get_split_ids, get_transforms
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+wandb.require("core")
 
 
 def load_data():
@@ -104,8 +105,8 @@ def train_step(loader, model, loss_fn, optimizer, epoch):
         loss = loss_fn(predictions, targets)
 
         # Doubly stochastic attention regularization
-        if alphas is not None:
-            loss += (1 - alphas.sum(dim=1) ** 2).mean()
+        # if alphas is not None:
+        #     loss += (1 - alphas.sum(dim=1) ** 2).mean()
 
         optimizer.zero_grad()
         loss.backward()
@@ -115,7 +116,7 @@ def train_step(loader, model, loss_fn, optimizer, epoch):
 
         losses.append(loss.item())
 
-    mlflow.log_metric("train_loss", np.mean(losses), step=epoch)
+    wandb.log({"train_loss": np.mean(losses)}, step=epoch)
     return np.mean(losses)
 
 
@@ -158,8 +159,8 @@ def val_step(loader, model, loss_fn, epoch, tokenizer):
             loss = loss_fn(predictions, targets)
 
             # Doubly stochastic attention regularization
-            if alphas is not None:
-                loss += (1 - alphas.sum(dim=1) ** 2).mean()
+            # if alphas is not None:
+            #     loss += (1 - alphas.sum(dim=1) ** 2).mean()
 
             # Accuracy@5
             _, ind = predictions.topk(k=5, dim=1, largest=True, sorted=True)
@@ -195,13 +196,12 @@ def val_step(loader, model, loss_fn, epoch, tokenizer):
 
         bleu_4 = corpus_bleu(references, hypotheses)
 
-        mlflow.log_metrics(
+        wandb.log(
             {
                 "val_loss": np.mean(losses),
                 "val_top5acc": np.mean(top5accs),
                 "val_bleu4": bleu_4,
-            },
-            step=epoch,
+            }
         )
         return np.mean(losses), np.mean(top5accs), bleu_4
 
@@ -250,26 +250,21 @@ def test_step(loader, model, tokenizer, beam_size=5, max_caption_length=50):
 
         bleu_4 = corpus_bleu(references, hypotheses)
 
-    mlflow.log_metric("test_bleu4", bleu_4)
+    wandb.log({"test_bleu4": bleu_4})
     return bleu_4
 
 
 def main():
     (train_loader, val_loader, test_loader), tokenizer, cfg = load_data()
 
-    mlflow.set_tracking_uri(cfg.MLFLOW_TRACKING_URI)
-    mlflow.enable_system_metrics_logging()
-
-    mlflow.set_experiment(experiment_name=cfg.EXPERIMENT_NAME)
-
     model = ImageCaptioningModel(
         tokenizer=tokenizer,
-        encoded_image_size=14,
-        embed_dim=512,
-        decoder_dim=512,
-        attention_dim=768,
-        vocab_size=len(tokenizer),
-        encoder_dim=2048,
+        encoded_image_size=cfg.ENCODED_IMAGE_SIZE,
+        embed_dim=cfg.EMBED_DIM,
+        decoder_dim=cfg.DECODER_DIM,
+        attention_dim=cfg.ATTENTION_DIM,
+        vocab_size=cfg.VOCAB_SIZE,
+        encoder_dim=cfg.ENCODER_DIM,
         debug=False,
     ).to(device)
 
@@ -280,53 +275,49 @@ def main():
         lr=cfg.LEARNING_RATE,
     )
 
+    wandb.init(
+        project=cfg.EXPERIMENT_NAME,
+        config={
+            **cfg.__dict__,
+            "Optimizer": optimizer.__class__.__name__,
+            "Loss Function": criterion.__class__.__name__,
+            "ENCODER_MODEL": "resnet101",
+            "DECODER_MODEL": "LSTM",
+        },
+    )
+
     total_params = sum(p.numel() for p in model.parameters())
     print(f"Total number of parameters in the model: {total_params}")
 
-    with mlflow.start_run():
-        mlflow.log_params(
-            {
-                **cfg.__dict__,
-                "Optimizer": optimizer.__class__.__name__,
-                "Loss Function": criterion.__class__.__name__,
-            }
+    best_val_bleu4 = 0.0
+
+    for epoch in tqdm(range(cfg.N_EPOCHS), desc="Epochs"):
+        train_loss = train_step(train_loader, model, criterion, optimizer, epoch)
+        print(f"Epoch: {epoch} | Train Loss: {train_loss:.4f}")
+
+        val_loss, val_top5acc, val_bleu = val_step(
+            val_loader, model, criterion, epoch, tokenizer
+        )
+        print(
+            f"Epoch: {epoch} | Val Loss: {val_loss:.4f} | Val Top-5 Acc: {val_top5acc:.2f} | Val BLEU-4: {val_bleu:.4f}"
         )
 
-        best_val_bleu4 = 0.0
+        if val_bleu > best_val_bleu4:
+            best_val_bleu4 = val_bleu
+            torch.save(model.state_dict(), "data/models/best_model.pth")
 
-        for epoch in tqdm(range(cfg.N_EPOCHS), desc="Epochs"):
-            train_loss = train_step(train_loader, model, criterion, optimizer, epoch)
-            print(f"Epoch: {epoch} | Train Loss: {train_loss:.4f}")
+    torch.save(model.state_dict(), "data/models/final_model.pth")
+    wandb.log_model("./data/models/final_model.pth", "show-attend-tell")
 
-            val_loss, val_top5acc, val_bleu = val_step(
-                val_loader, model, criterion, epoch, tokenizer
-            )
-            print(
-                f"Epoch: {epoch} | Val Loss: {val_loss:.4f} | Val Top-5 Acc: {val_top5acc:.2f} | Val BLEU-4: {val_bleu:.4f}"
-            )
+    test_bleu4 = test_step(
+        test_loader,
+        model,
+        tokenizer,
+        beam_size=cfg.BEAM_SIZE,
+        max_caption_length=cfg.MAX_CAPTION_LENGTH,
+    )
 
-            if val_bleu > best_val_bleu4:
-                best_val_bleu4 = val_bleu
-                mlflow.pytorch.log_model(
-                    model,
-                    artifact_path="best_model",
-                    registered_model_name="show-attend-tell",
-                )
-
-        mlflow.pytorch.log_model(
-            model, "final_model", registered_model_name="show-attend-tell"
-        )
-        mlflow.pytorch.save_model(model, "models")
-
-        test_bleu4 = test_step(
-            test_loader,
-            model,
-            tokenizer,
-            beam_size=cfg.BEAM_SIZE,
-            max_caption_length=cfg.MAX_CAPTION_LENGTH,
-        )
-
-        print(f"Test-set BLEU-4 score: {test_bleu4:.4f}")
+    print(f"Test-set BLEU-4 score: {test_bleu4:.4f}")
 
 
 if __name__ == "__main__":

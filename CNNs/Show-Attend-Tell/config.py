@@ -7,7 +7,7 @@ class Config:
 
     BATCH_SIZE: int = 64
     N_EPOCHS: int = 20
-    LEARNING_RATE: float = 4e-4
+    LEARNING_RATE: float = 3e-4
     ENCODED_IMAGE_SIZE: int = 14
     EMBED_DIM: int = 512
     DECODER_DIM: int = 512
@@ -17,5 +17,4 @@ class Config:
     BEAM_SIZE: int = 5
     MAX_CAPTION_LENGTH: int = 50
 
-    MLFLOW_TRACKING_URI: str = "http://localhost:5000"
     EXPERIMENT_NAME: str = "show-attend-tell"
