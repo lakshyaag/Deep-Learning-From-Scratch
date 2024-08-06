@@ -15,7 +15,7 @@ This repository contains the code to build popular deep learning models from scr
   - [ ] Vanilla RNN
   - [x] LSTM
   - [ ] GRU
-  - [ ] Image Captioning (CNN + RNN)
+  - [x] Image Captioning (CNN + RNN)
 - [ ] Generative Models
   - [ ] GANs
   - [ ] VAEs
