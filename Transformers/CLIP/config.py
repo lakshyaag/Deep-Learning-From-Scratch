@@ -8,14 +8,14 @@ class Config:
     D_EMBD: int = 512
     IMAGE_SHAPE: tuple = (3, 224, 224)
     TOKENIZER_MAX_LEN: int = 200
-    INITIAL_TEMPERATURE: float = 0.07
-    DROPOUT: float = 0.1
+    INITIAL_TEMPERATURE: float = 1.0
+    DROPOUT: float = 0.3
     IMAGE_MODEL: str = "resnet50"
     TEXT_MODEL: str = "distilbert-base-uncased"
-    TRAINABLE: bool = False
+    TRAINABLE: bool = True
 
-    BATCH_SIZE: int = 32
-    N_EPOCHS: int = 3
+    BATCH_SIZE: int = 64
+    N_EPOCHS: int = 10
     IMAGE_LEARNING_RATE: float = 1e-4
     TEXT_LEARNING_RATE: float = 1e-5
     LEARNING_RATE: float = 1e-3

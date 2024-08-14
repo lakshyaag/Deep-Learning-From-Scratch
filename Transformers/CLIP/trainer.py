@@ -169,6 +169,7 @@ def main():
                 model.state_dict(),
                 f"./data/models/best_{cfg.EXPERIMENT_NAME}.pt",
             )
+            print(f"Best model saved at epoch {epoch}")
 
     # Save the final model
     torch.save(

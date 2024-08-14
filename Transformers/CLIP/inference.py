@@ -60,8 +60,6 @@ def main(weights: str = "final_clip-openai.pt", n: int = 8):
 
     Args:
 
-    - query (str): Query to find matching images.
-
     - weights (str): Path to the model weights.
 
     - n (int): Number of images to display
