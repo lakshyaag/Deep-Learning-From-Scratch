@@ -1,6 +1,6 @@
 # Deep Learning from Scratch
 
-This repository contains the code to build popular deep learning models from scratch using only tensors from PyTorch.
+This repository contains the code to build popular deep learning models from scratch using only tensors from PyTorch, and minimal usage of other libraries.
 
 ## Models
 
@@ -9,19 +9,16 @@ This repository contains the code to build popular deep learning models from scr
   - [x] AlexNet
   - [x] VGGNet
   - [x] ResNet
-  - [ ] YOLO
-  - [ ] R-CNN
-- [ ] Recurrent Neural Network (RNN)
-  - [ ] Vanilla RNN
-  - [x] LSTM
-  - [ ] GRU
-  - [x] Image Captioning (CNN + RNN)
+  - [x] Image Captioning
+  - [x] Show, Attend and Tell
 - [ ] Generative Models
-  - [ ] GANs
+  - [x] LSTM
+  - [x] GAN + DCGAN
   - [ ] VAEs
   - [ ] Diffusion Models
 - [ ] Transformers
   - [ ] Vanilla Transformer
   - [ ] BERT
-  - [ ] Vision Transformer (ViT)
-  - [ ] GPT
+  - [x] Vision Transformer (ViT)
+  - [x] Masked Autoencoders (MAE)
+  - [x] GPT
