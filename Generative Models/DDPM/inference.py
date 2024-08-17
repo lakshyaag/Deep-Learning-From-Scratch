@@ -14,7 +14,14 @@ cfg = Config()
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
-def main(weights: str, seed: int = 42, n: int = cfg.EVAL_BATCH_SIZE):
+def main(
+    weights: str,
+    sampler: str = "ddpm",
+    seed: int = 42,
+    n: int = cfg.EVAL_BATCH_SIZE,
+    steps: int = cfg.N_TIMESTEPS,
+    eta: float = 0.0,
+):
     os.makedirs(cfg.SAMPLE_DIR, exist_ok=True)
 
     model = Unet(
@@ -31,13 +38,23 @@ def main(weights: str, seed: int = 42, n: int = cfg.EVAL_BATCH_SIZE):
     checkpoint = torch.load(weights, map_location=device)
 
     model.load_state_dict(checkpoint["model"])
-    # pipeline.load_state_dict(checkpoint["pipeline"])
     model.eval()
 
     torch.manual_seed(seed)
     noise = torch.randn(n, cfg.IN_CHANNELS, cfg.IMAGE_SIZE, cfg.IMAGE_SIZE).to(device)
 
-    images, x_0 = pipeline.sample_image(model, noise, save_interval=cfg.SAVE_INTERVAL)
+    if sampler == "ddpm":
+        images, x_0 = pipeline.sample_image(
+            model, noise, save_interval=cfg.SAVE_INTERVAL
+        )
+    elif sampler == "ddim":
+        images, x_0 = pipeline.sample_ddim(
+            model,
+            noise,
+            ddim_steps=steps,
+            eta=eta,
+            save_interval=cfg.SAVE_INTERVAL,
+        )
 
     fig = plt.figure()
     ims = []
@@ -50,13 +67,13 @@ def main(weights: str, seed: int = 42, n: int = cfg.EVAL_BATCH_SIZE):
     plt.axis("off")
     ani = animation.ArtistAnimation(fig, ims, interval=1000, blit=True, repeat=False)
 
-    ani.save(f"{cfg.SAMPLE_DIR}/ddpm_sample_{seed}.gif", writer="pillow")
+    ani.save(f"{cfg.SAMPLE_DIR}/ddpm_sample_{seed}_{sampler}.gif", writer="pillow")
     print("Saved animation!")
 
     x_0 = reverse_transform(make_grid(x_0, nrow=4, padding=4))
     plt.imshow(x_0)
     plt.axis("off")
-    plt.savefig(f"{cfg.SAMPLE_DIR}/ddpm_sample_{seed}.png")
+    plt.savefig(f"{cfg.SAMPLE_DIR}/ddpm_sample_{seed}_{sampler}.png")
     plt.close()
     print("Saved image!")
 

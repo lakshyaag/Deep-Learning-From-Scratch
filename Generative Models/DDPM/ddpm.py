@@ -43,7 +43,7 @@ class DDPMPipeline(nn.Module):
             TimeRemainingColumn(),
         ) as progress:
             inference_task = progress.add_task(
-                "[purple]Generating...", total=self.n_timesteps
+                "[purple]Generating (DDPM)...", total=self.n_timesteps
             )
 
             for t in range(self.n_timesteps - 1, -1, -1):
@@ -68,7 +68,69 @@ class DDPMPipeline(nn.Module):
                     images.append(x.cpu())
 
                 progress.update(
-                    inference_task, advance=1, description="[purple]Generating..."
+                    inference_task,
+                    advance=1,
+                    description="[purple]Generating (DDPM)...",
+                )
+
+        return images, x
+
+    @torch.no_grad()
+    def sample_ddim(self, model, x_t, ddim_steps=50, eta=0.0, save_interval=100):
+        x = x_t
+        images = []
+        step_size = self.n_timesteps // ddim_steps
+        save_every_n_steps = self.n_timesteps // save_interval
+
+        with Progress(
+            TextColumn("[progress.description]{task.description}"),
+            BarColumn(),
+            MofNCompleteColumn(),
+            TimeRemainingColumn(),
+        ) as progress:
+            inference_task = progress.add_task(
+                "[purple]Generating (DDIM)...", total=ddim_steps
+            )
+
+            for t in range(self.n_timesteps - 1, -1, -step_size):
+                prev_t = t - step_size
+
+                ts = t * torch.ones(x.shape[0], dtype=torch.long, device=x.device)
+                noise_hat = model(x, ts)
+
+                alpha_hat_t = self.alphas_hat.to(x.device)[t]
+
+                alpha_hat_t_prev = (
+                    self.alphas_hat.to(x.device)[prev_t]
+                    if prev_t >= 0
+                    else torch.tensor(1.0).to(x.device)
+                )
+
+                sigma_t = eta * torch.sqrt(
+                    (1 - alpha_hat_t_prev)
+                    / (1 - alpha_hat_t)
+                    * (1 - alpha_hat_t / alpha_hat_t_prev)
+                )
+
+                pred_x_0 = (x - (1 - alpha_hat_t) ** 0.5 * noise_hat) / alpha_hat_t**0.5
+
+                direction_x_t = (1 - alpha_hat_t_prev - sigma_t**2) ** 0.5 * noise_hat
+
+                x = (
+                    alpha_hat_t_prev**0.5 * pred_x_0
+                    + direction_x_t
+                    + sigma_t * torch.randn_like(x)
+                )
+
+                if save_every_n_steps != 0 and (
+                    t // step_size % save_every_n_steps == 0
+                ):
+                    images.append(x.cpu())
+
+                progress.update(
+                    inference_task,
+                    advance=1,
+                    description="[purple]Generating (DDIM)...",
                 )
 
         return images, x
