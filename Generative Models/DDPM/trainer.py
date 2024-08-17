@@ -1,9 +1,18 @@
+import os
 import torch
 import wandb
 from config import Config
 from ddpm import DDPMPipeline
 from models import Unet
 from rich import print
+from rich.progress import (
+    Progress,
+    BarColumn,
+    TextColumn,
+    TimeRemainingColumn,
+    MofNCompleteColumn,
+)
+from tqdm import tqdm
 from torch import nn
 from torch.utils.data import DataLoader
 from torchvision.datasets import CIFAR10
@@ -33,51 +42,74 @@ def load_data(data_dir):
     return train_loader
 
 
-def train_epoch(model, pipeline, optimizer, lr_scheduler, loss_fn, train_loader):
+def train_epoch(
+    model,
+    pipeline,
+    optimizer,
+    lr_scheduler,
+    loss_fn,
+    train_loader,
+):
     model.train()
     train_loss = 0.0
 
-    for i, (images, _) in enumerate(train_loader):
-        images = images.to(device)
+    with Progress(
+        TextColumn("[progress.description]{task.description}"),
+        BarColumn(),
+        MofNCompleteColumn(),
+        TimeRemainingColumn(),
+    ) as progress:
+        batch_task = progress.add_task("[red]Training...", total=len(train_loader))
+        for i, (images, _) in enumerate(train_loader):
+            images = images.to(device)
 
-        t = torch.randint(0, cfg.N_TIMESTEPS, size=(1,)).to(device).long()
+            t = torch.randint(0, cfg.N_TIMESTEPS, size=(1,)).to(device).long()
 
-        noisy_x, eta = pipeline(images, t)
-        noisy_x = noisy_x.to(device)
+            noisy_x, eta = pipeline(images, t)
+            noisy_x = noisy_x.to(device)
 
-        noise_hat = pipeline.backward(model, noisy_x, t)
-        loss = loss_fn(noise_hat, eta)
+            noise_hat = pipeline.backward(model, noisy_x, t)
+            loss = loss_fn(noise_hat, eta)
 
-        optimizer.zero_grad()
-        loss.backward()
+            optimizer.zero_grad()
+            loss.backward()
 
-        torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
+            torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
 
-        optimizer.step()
-        lr_scheduler.step()
+            optimizer.step()
+            lr_scheduler.step()
 
-        train_loss += loss.item()
+            train_loss += loss.item()
+
+            progress.update(
+                batch_task,
+                advance=1,
+                description=f"[red]Training - Loss: {loss.item():.4f}",
+            )
 
     train_loss /= len(train_loader)
-
     wandb.log({"train_loss": train_loss, "lr": lr_scheduler.get_last_lr()[0]})
 
     return train_loss
 
 
-def eval_epoch(model: Unet, pipeline: DDPMPipeline, epoch, config: Config):
+def eval_epoch(
+    model: Unet, pipeline: DDPMPipeline, epoch, config: Config
+):
     model.eval()
 
     noise = torch.randn(
         config.EVAL_BATCH_SIZE, config.IN_CHANNELS, config.IMAGE_SIZE, config.IMAGE_SIZE
     ).to(device)
 
-    _, x_0 = pipeline.sample_image(model, noise)
+    _, x_0 = pipeline.sample_image(model, noise, save_interval=0)
 
     return x_0
 
 
 def main():
+    os.makedirs(cfg.MODEL_DIR, exist_ok=True)
+
     train_loader = load_data(cfg.DATA_DIR)
 
     pipeline = DDPMPipeline(n_timesteps=cfg.N_TIMESTEPS).to(device)
@@ -117,9 +149,14 @@ def main():
 
     print(f"Starting DDPM training with config: {cfg}")
 
-    for epoch in range(cfg.N_EPOCHS):
+    for epoch in tqdm(range(cfg.N_EPOCHS), desc="Epochs"):
         train_loss = train_epoch(
-            model, pipeline, optimizer, lr_scheduler, loss_fn, train_loader
+            model,
+            pipeline,
+            optimizer,
+            lr_scheduler,
+            loss_fn,
+            train_loader,
         )
 
         print(
@@ -141,11 +178,11 @@ def main():
         if epoch % cfg.CHECKPOINT_EVERY_EPOCH == 0 or epoch == cfg.N_EPOCHS - 1:
             checkpoint = {
                 "model": model.state_dict(),
+                "pipeline": pipeline.state_dict(),
                 "optimizer": optimizer.state_dict(),
                 "lr_scheduler": lr_scheduler.state_dict(),
                 "epoch": epoch,
                 "config": cfg,
-                "pipeline": pipeline.state_dict(),
             }
 
             torch.save(
@@ -154,11 +191,11 @@ def main():
 
     checkpoint = {
         "model": model.state_dict(),
+        "pipeline": pipeline.state_dict(),
         "optimizer": optimizer.state_dict(),
         "lr_scheduler": lr_scheduler.state_dict(),
         "epoch": epoch,
         "config": cfg,
-        "pipeline": pipeline.state_dict(),
     }
 
     torch.save(checkpoint, f"{cfg.MODEL_DIR}/{run.id}_ddpm_checkpoint_final.pt")
