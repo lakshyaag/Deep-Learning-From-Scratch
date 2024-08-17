@@ -1,3 +1,4 @@
+import typer
 import os
 import torch
 from rich import print
@@ -13,9 +14,9 @@ cfg = Config()
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
-def main():
+def main(weights: str, seed: int = 42, n: int = cfg.EVAL_BATCH_SIZE):
     os.makedirs(cfg.SAMPLE_DIR, exist_ok=True)
-    seed = 41
+
     model = Unet(
         image_size=cfg.IMAGE_SIZE,
         in_channels=cfg.IN_CHANNELS,
@@ -27,18 +28,14 @@ def main():
 
     pipeline = DDPMPipeline(n_timesteps=cfg.N_TIMESTEPS).to(device)
 
-    checkpoint = torch.load(
-        f"{cfg.MODEL_DIR}/9p4viyr6_ddpm_checkpoint_final.pt", map_location=device
-    )
+    checkpoint = torch.load(weights, map_location=device)
 
     model.load_state_dict(checkpoint["model"])
-    pipeline.load_state_dict(checkpoint["pipeline"])
+    # pipeline.load_state_dict(checkpoint["pipeline"])
     model.eval()
 
     torch.manual_seed(seed)
-    noise = torch.randn(
-        cfg.EVAL_BATCH_SIZE, cfg.IN_CHANNELS, cfg.IMAGE_SIZE, cfg.IMAGE_SIZE
-    ).to(device)
+    noise = torch.randn(n, cfg.IN_CHANNELS, cfg.IMAGE_SIZE, cfg.IMAGE_SIZE).to(device)
 
     images, x_0 = pipeline.sample_image(model, noise, save_interval=cfg.SAVE_INTERVAL)
 
@@ -65,4 +62,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    typer.run(main)
