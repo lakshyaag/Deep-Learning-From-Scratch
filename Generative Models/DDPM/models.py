@@ -433,28 +433,29 @@ class AttentionUpBlock(nn.Module):
 
 
 class Unet(nn.Module):
+    """
+    UNet model with multi-head self-attention.
+
+    Args:
+    - image_size (int): Size of the input images.
+    - in_channels (int): Number of input channels. Default is 3 for RGB images.
+    - base_channels (int): Number of channels in the first convolutional layer
+    - n_layers(int): Number of ResNet/Attention blocks in each downsample/upsample block.
+    - n_heads (int): Number of attention heads in the self-attention blocks.
+    - n_groups (int): Number of groups for GroupNorm.
+    - debug (bool): Whether to print debug information. Default is False.
+    """
+
     def __init__(
         self,
-        image_size=256,
-        in_channels=3,
-        base_channels=128,
-        n_layers=2,
-        n_heads=4,
-        n_groups=32,
-        debug=False,
+        image_size: int = 256,
+        in_channels: int = 3,
+        base_channels: int = 128,
+        n_layers: int = 2,
+        n_heads: int = 4,
+        n_groups: int = 32,
+        debug: bool = False,
     ):
-        """
-        UNet model with multi-head self-attention.
-
-        Args:
-        - image_size (int): Size of the input images.
-        - in_channels (int): Number of input channels. Default is 3 for RGB images.
-        - base_channels (int): Number of channels in the first convolutional layer
-        - n_layers(int): Number of ResNet/Attention blocks in each downsample/upsample block.
-        - n_heads (int): Number of attention heads in the self-attention blocks.
-        - n_groups (int): Number of groups for GroupNorm.
-        - debug (bool): Whether to print debug information. Default is False.
-        """
         super(Unet, self).__init__()
 
         self.image_size = image_size
@@ -583,7 +584,7 @@ class Unet(nn.Module):
         if self.debug:
             print(f"{name}: {tensor.shape}")
 
-    def forward(self, x, timestep):
+    def forward(self, x: torch.Tensor, timestep: torch.Tensor) -> torch.Tensor:
         self._debug_print(x, "[Unet] Input")
 
         t_encoded = self.positional_encoding(timestep)

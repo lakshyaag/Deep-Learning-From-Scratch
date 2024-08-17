@@ -2,7 +2,15 @@ from torch.utils.data import Dataset
 
 
 class DDPMDataset(Dataset):
-    def __init__(self, dataset, transform=None):
+    """
+    Custom dataset class that wraps a list of images, applying a transformation if provided.
+
+    Args:
+    - dataset (list): List of images.
+    - transform (callable, optional): A function/transform to apply to each image
+    """
+
+    def __init__(self, dataset: list, transform: callable = None):
         self.dataset = dataset
         self.transform = transform
 

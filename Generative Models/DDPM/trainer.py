@@ -25,7 +25,10 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 cfg = Config()
 
 
-def load_data(data_dir):
+def load_data(data_dir: str):
+    """
+    Load the CIFAR-10 dataset from the given directory.
+    """
     train_dataset = CIFAR10(
         root=data_dir,
         train=True,
@@ -43,13 +46,24 @@ def load_data(data_dir):
 
 
 def train_epoch(
-    model,
-    pipeline,
-    optimizer,
-    lr_scheduler,
-    loss_fn,
-    train_loader,
-):
+    model: Unet,
+    pipeline: DDPMPipeline,
+    optimizer: torch.optim.Optimizer,
+    lr_scheduler: torch.optim.lr_scheduler._LRScheduler,
+    loss_fn: nn.Module,
+    train_loader: DataLoader,
+) -> float:
+    """
+    Train the model for one epoch.
+
+    Args:
+    - model (nn.Module): The UNet model to be trained.
+    - pipeline (DDPMPipeline): The diffusion pipeline used for generating noisy inputs.
+    - optimizer (torch.optim.Optimizer): The optimizer for updating model parameters.
+    - lr_scheduler (torch.optim.lr_scheduler._LRScheduler): The learning rate scheduler.
+    - loss_fn (nn.Module): The loss function to compute the training loss.
+    - train_loader (DataLoader): DataLoader for the training dataset.
+    """
     model.train()
     train_loss = 0.0
 
@@ -88,12 +102,14 @@ def train_epoch(
             )
 
     train_loss /= len(train_loader)
-    wandb.log({"train_loss": train_loss, "lr": lr_scheduler.get_last_lr()[0]})
 
     return train_loss
 
 
-def eval_epoch(model: Unet, pipeline: DDPMPipeline, config: Config):
+def eval_epoch(model: Unet, pipeline: DDPMPipeline, config: Config) -> torch.Tensor:
+    """
+    Generate samples from the trained model
+    """
     model.eval()
 
     noise = torch.randn(
@@ -108,8 +124,10 @@ def eval_epoch(model: Unet, pipeline: DDPMPipeline, config: Config):
 def main():
     os.makedirs(cfg.MODEL_DIR, exist_ok=True)
 
+    # Load the dataset
     train_loader = load_data(cfg.DATA_DIR)
 
+    # Initialize the DDPM pipeline and the UNet model
     pipeline = DDPMPipeline(
         beta_start=cfg.BETA_START,
         beta_end=cfg.BETA_END,
@@ -129,6 +147,7 @@ def main():
     total_param_count = sum(p.numel() for p in model.parameters())
     print(f"Total parameter count: {total_param_count / 1e6:.2f}M")
 
+    # Initialize the optimizer and the learning rate scheduler
     optimizer = torch.optim.Adam(model.parameters(), lr=cfg.LEARNING_RATE)
 
     lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
@@ -138,8 +157,10 @@ def main():
         eta_min=1e-9,
     )
 
+    # Initialize the loss function
     loss_fn = nn.MSELoss()
 
+    # Start a new run
     run = wandb.init(
         project=cfg.EXPERIMENT_NAME,
         config={
@@ -163,6 +184,7 @@ def main():
             train_loader,
         )
 
+        wandb.log({"train_loss": train_loss, "lr": lr_scheduler.get_last_lr()[0]})
         print(
             f"Epoch {epoch} | Train Loss: {train_loss:.4f} | LR: {lr_scheduler.get_last_lr()[0]:.3e}"
         )

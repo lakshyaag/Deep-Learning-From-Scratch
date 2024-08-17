@@ -22,6 +22,17 @@ def main(
     steps: int = cfg.N_TIMESTEPS,
     eta: float = 0.0,
 ):
+    """
+    Generate samples from a trained DDPM model.
+
+    Args:\n
+    - weights (str): The path to the trained model weights.\n
+    - sampler (str): The sampler to use. Either `ddpm` or `ddim`. Defaults to `ddpm`.\n
+    - seed (int): The random seed to use. Defaults to 42.\n
+    - n (int): The number of samples to generate. Defaults to 8.\n
+    - steps (int): The number of steps to run DDIM for. Defaults to 1000.\n
+    - eta (float): The noise level for DDIM. Defaults to 0.0.
+    """
     os.makedirs(cfg.SAMPLE_DIR, exist_ok=True)
 
     model = Unet(
@@ -33,13 +44,14 @@ def main(
         n_groups=cfg.N_GROUPS,
     ).to(device)
 
-    pipeline = DDPMPipeline(n_timesteps=cfg.N_TIMESTEPS, noise_schedule=cfg.NOISE_SCHEDULE).to(
-        device
-    )
+    pipeline = DDPMPipeline(
+        n_timesteps=cfg.N_TIMESTEPS, noise_schedule=cfg.NOISE_SCHEDULE
+    ).to(device)
 
     checkpoint = torch.load(weights, map_location=device)
 
     model.load_state_dict(checkpoint["model"])
+    pipeline.load_state_dict(checkpoint["pipeline"])
     model.eval()
 
     torch.manual_seed(seed)
@@ -58,6 +70,7 @@ def main(
             save_interval=cfg.SAVE_INTERVAL,
         )
 
+    # Save the images as a GIF
     fig = plt.figure()
     ims = []
 
@@ -72,6 +85,7 @@ def main(
     ani.save(f"{cfg.SAMPLE_DIR}/ddpm_sample_{seed}_{sampler}.gif", writer="pillow")
     print("Saved animation!")
 
+    # Save the final image
     x_0 = reverse_transform(make_grid(x_0, nrow=4, padding=4))
     plt.imshow(x_0)
     plt.axis("off")
