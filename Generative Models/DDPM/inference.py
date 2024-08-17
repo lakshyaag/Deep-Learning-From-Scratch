@@ -33,7 +33,9 @@ def main(
         n_groups=cfg.N_GROUPS,
     ).to(device)
 
-    pipeline = DDPMPipeline(n_timesteps=cfg.N_TIMESTEPS).to(device)
+    pipeline = DDPMPipeline(n_timesteps=cfg.N_TIMESTEPS, noise_schedule=cfg.NOISE_SCHEDULE).to(
+        device
+    )
 
     checkpoint = torch.load(weights, map_location=device)
 

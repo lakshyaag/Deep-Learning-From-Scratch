@@ -93,9 +93,7 @@ def train_epoch(
     return train_loss
 
 
-def eval_epoch(
-    model: Unet, pipeline: DDPMPipeline, epoch, config: Config
-):
+def eval_epoch(model: Unet, pipeline: DDPMPipeline, config: Config):
     model.eval()
 
     noise = torch.randn(
@@ -112,7 +110,13 @@ def main():
 
     train_loader = load_data(cfg.DATA_DIR)
 
-    pipeline = DDPMPipeline(n_timesteps=cfg.N_TIMESTEPS).to(device)
+    pipeline = DDPMPipeline(
+        beta_start=cfg.BETA_START,
+        beta_end=cfg.BETA_END,
+        n_timesteps=cfg.N_TIMESTEPS,
+        noise_schedule=cfg.NOISE_SCHEDULE,
+    ).to(device)
+
     model = Unet(
         image_size=cfg.IMAGE_SIZE,
         in_channels=cfg.IN_CHANNELS,

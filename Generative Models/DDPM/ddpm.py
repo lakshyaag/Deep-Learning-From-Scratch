@@ -7,13 +7,20 @@ from rich.progress import (
     TimeRemainingColumn,
     MofNCompleteColumn,
 )
+from utils import linear_schedule, cosine_schedule
 
 
 class DDPMPipeline(nn.Module):
-    def __init__(self, beta_start=1e-4, beta_end=1e-2, n_timesteps=1000):
+    def __init__(
+        self, beta_start=1e-4, beta_end=1e-2, n_timesteps=1000, noise_schedule="linear"
+    ):
         super(DDPMPipeline, self).__init__()
 
-        self.betas = torch.linspace(beta_start, beta_end, n_timesteps)
+        self.betas = (
+            linear_schedule(beta_start, beta_end, n_timesteps)
+            if noise_schedule == "linear"
+            else cosine_schedule(n_timesteps)
+        )
         self.alphas = 1 - self.betas
 
         self.alphas_hat = torch.cumprod(self.alphas, dim=0)

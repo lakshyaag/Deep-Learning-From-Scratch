@@ -13,6 +13,7 @@ class Config:
     IMAGE_SIZE: int = 32
     BETA_START: float = 1e-4
     BETA_END: float = 1e-2
+    NOISE_SCHEDULE: str = "cosine"
 
     N_LAYERS: int = 2
     N_HEADS: int = 4
