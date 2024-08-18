@@ -40,5 +40,5 @@ python inference.py /path/to/weights.pt --seed 42 --n 8 --sampler ddim --steps 5
 
 - [mattroz/diffusion-ddpm](https://github.com/mattroz/diffusion-ddpm)
 - [Denoising Diffusion Probabilistic Models (Ho et al., 2020)](https://arxiv.org/abs/2006.11239)
-- [Denoising Diffusion Implicit Models (Song et al., 2021)](https://arxiv.org/pdf/2010.02502)
+- [Denoising Diffusion Implicit Models (Song et al., 2020)](https://arxiv.org/pdf/2010.02502)
 - [Improved Denoising Diffusion Probabilistic Models (Nichol & Dhariwal, 2021)](https://arxiv.org/pdf/2102.09672)
