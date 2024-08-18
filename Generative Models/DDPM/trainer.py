@@ -190,7 +190,7 @@ def main():
         )
 
         if epoch % cfg.EVAL_EVERY_EPOCH == 0 or epoch == cfg.N_EPOCHS - 1:
-            x_0 = eval_epoch(model, pipeline, epoch, cfg)
+            x_0 = eval_epoch(model, pipeline, cfg)
             wandb.log(
                 {
                     "generated_images": [

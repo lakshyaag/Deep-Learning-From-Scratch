@@ -14,7 +14,7 @@ class Config:
     N_TIMESTEPS: int = 1000
     BETA_START: float = 1e-4
     BETA_END: float = 1e-2
-    NOISE_SCHEDULE: str = "cosine"
+    NOISE_SCHEDULE: str = "linear"
 
     # U-Net hyperparameters
     N_LAYERS: int = 2
@@ -25,7 +25,7 @@ class Config:
 
     # Training hyperparameters
     BATCH_SIZE: int = 256
-    LEARNING_RATE: float = 2e-5
+    LEARNING_RATE: float = 2e-4
     N_EPOCHS: int = 50
 
     DEVICE: str = "cuda" if is_available() else "cpu"
