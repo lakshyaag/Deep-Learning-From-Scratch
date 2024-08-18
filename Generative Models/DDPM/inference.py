@@ -51,7 +51,7 @@ def main(
     checkpoint = torch.load(weights, map_location=device)
 
     model.load_state_dict(checkpoint["model"])
-    pipeline.load_state_dict(checkpoint["pipeline"])
+    # pipeline.load_state_dict(checkpoint["pipeline"])
     model.eval()
 
     torch.manual_seed(seed)

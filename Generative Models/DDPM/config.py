@@ -24,7 +24,7 @@ class Config:
     BASE_CHANNELS: int = 128
 
     # Training hyperparameters
-    BATCH_SIZE: int = 256
+    BATCH_SIZE: int = 512
     LEARNING_RATE: float = 2e-4
     N_EPOCHS: int = 50
 

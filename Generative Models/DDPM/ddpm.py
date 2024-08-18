@@ -9,12 +9,6 @@ from rich.progress import (
 )
 from models import Unet
 from utils import linear_schedule, cosine_schedule
-from enum import Enum
-
-
-class NoiseSchedule(Enum):
-    LINEAR = "linear"
-    COSINE = "cosine"
 
 
 class DDPMPipeline(nn.Module):
@@ -27,7 +21,7 @@ class DDPMPipeline(nn.Module):
     - beta_start (float): The starting value of the beta schedule. Defaults to 1e-4.
     - beta_end (float): The ending value of the beta schedule. Defaults to 1e-2.
     - n_timesteps (int): The number of timesteps for the diffusion process. Defaults to 1000.
-    - noise_schedule (NoiseSchedule): The noise schedule to use. Can be either "linear" or "cosine".
+    - noise_schedule (str): The noise schedule to use. Can be either "linear" or "cosine".
 
     References:
     - Denoising Diffusion Probabilistic Models (Ho et al., 2020): https://arxiv.org/abs/2006.11239
@@ -40,13 +34,13 @@ class DDPMPipeline(nn.Module):
         beta_start: float = 1e-4,
         beta_end: float = 1e-2,
         n_timesteps: int = 1000,
-        noise_schedule: NoiseSchedule = NoiseSchedule.LINEAR,
+        noise_schedule: str = "linear",
     ):
         super(DDPMPipeline, self).__init__()
 
         self.betas = (
             linear_schedule(beta_start, beta_end, n_timesteps)
-            if noise_schedule == NoiseSchedule.LINEAR
+            if noise_schedule == "linear"
             else cosine_schedule(n_timesteps)
         )
         self.alphas = 1 - self.betas
